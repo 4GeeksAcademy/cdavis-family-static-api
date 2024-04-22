@@ -2,7 +2,7 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 import os
-from flask import Flask, request, jsonify, url_for
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from datastructures import FamilyStructure
@@ -46,13 +46,10 @@ def get_all_members():
 
     # this is how you can use the Family datastructure by calling its methods
     members = jackson_family.get_all_members()
-    response_body = {
-        "hello": "world",
-        "family": members
-    }
+    
 
 
-    return jsonify(response_body), 200
+    return jsonify(members), 200
 
 @app.route('/member/<int:id>', methods=['GET'])
 def get_member(id):
@@ -77,14 +74,30 @@ def add_member():
     
 @app.route('/member/<int:id>', methods=['DELETE'])
 def delete_member(id):
-    try:
+   
         success = jackson_family.delete_member(id)
+        if success:
+            return jsonify({"done": True}), 200
+        else:
+            return jsonify({"error": "Miembro no encontrado"}), 400
+   
+    
+@app.route('/member/<int:id>', methods=['PUT'])
+def update_member(id):
+    data = request.get_json()
+    required_fields = ['first_name', 'age', 'lucky_numbers']
+    if not all(field in data for field in required_fields):
+        return jsonify({"error": "Formato incorrecto del cuerpo de la solicitud"}), 400
+    try:
+        success = jackson_family.update_member(id, data)
         if success:
             return jsonify({"done": True}), 200
         else:
             return jsonify({"error": "Miembro no encontrado"}), 400
     except Exception as e:
         return jsonify({"error": "Error interno del servidor: {}".format(str(e))}), 500
+    
+
 
 if __name__ == '__main__':
     PORT = int(os.environ.get('PORT', 3000))
